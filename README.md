@@ -1,6 +1,6 @@
 # Qwen OpenAI Proxy
 
-![License](https://img.shields.io/github/license/USERNAME/qwen-openai-proxy)
+![License](https://img.shields.io/github/license/palprateek/qwenchat2api)
 ![Node](https://img.shields.io/badge/node-%3E%3D18-blue)
 ![OpenAI Compatible](https://img.shields.io/badge/OpenAI-compatible-green)
 
