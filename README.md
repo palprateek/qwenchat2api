@@ -18,11 +18,26 @@ npm start          # → http://localhost:5000/v1/chat/completions
 
 ### Authentication
 
-```bash
-# Interactive browser login (recommended)
-npm run login
+**Option A: Playwright Login (Recommended)**
 
-# Or manually set credentials in .env:
+```bash
+npm run login
+```
+
+Opens a browser. Log in to chat.qwen.ai, then press Enter in the terminal to extract tokens.
+
+**Option B: Manual Token Extraction**
+
+1. Log in to [chat.qwen.ai](https://chat.qwen.ai)
+2. Open browser DevTools (F12)
+3. Go to Console tab
+4. Run: `localStorage.getItem("token")`
+5. Copy the token value
+6. Go to Network tab, find any request to chat.qwen.ai
+7. Copy the `Cookie` header value
+8. Create a `.env` file:
+
+```env
 QWEN_AUTH_TOKEN=your_token_here
 QWEN_COOKIE="your_cookie_string_here"
 ```
