@@ -290,6 +290,22 @@ The proxy automatically:
 
 ---
 
+## Docker
+
+```bash
+# Build
+docker build -t qwenchat2api .
+
+# Run
+docker run -d \
+  -p 5000:5000 \
+  -e QWEN_AUTH_TOKEN=your_token \
+  -e QWEN_COOKIE="your_cookie" \
+  -v qwenchat2api-data:/app/data \
+  --name qwenchat2api \
+  qwenchat2api
+```
+
 ## Caveats
 
 - `chat.qwen.ai` is not an official public API
