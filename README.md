@@ -1,168 +1,323 @@
 # Qwen OpenAI Proxy
 
-An OpenAI-compatible proxy server that routes requests from any OpenAI SDK client to Qwen models via [chat.qwen.ai](https://chat.qwen.ai).
+![License](https://img.shields.io/github/license/USERNAME/qwen-openai-proxy)
+![Node](https://img.shields.io/badge/node-%3E%3D18-blue)
+![OpenAI Compatible](https://img.shields.io/badge/OpenAI-compatible-green)
 
-- **Drop-in replacement** for `api.openai.com` — works with OpenCode, LangChain, any OpenAI-compatible tool
-- **Streaming SSE** — real‑time token streams in OpenAI chunk format
-- **Tool calling** — translates Qwen's XML‑style tool calls to OpenAI `tool_calls`
-- **Conversation persistence** — reuses Qwen chat sessions; no `X‑Conversation‑Id` header required (auto‑assigned per client IP)
-- **System message merging** — multiple system prompts are merged into one (Qwen constraint: ≤1 system message, must be at index 0)
+An OpenAI-compatible proxy server that routes requests from any OpenAI SDK client to Qwen models via `chat.qwen.ai`.
+
+- Drop-in replacement for `api.openai.com`
+- Streaming SSE support
+- OpenAI tool calling compatibility
+- Session persistence
+- System prompt merging for Qwen compatibility
+
+---
+
+## Why?
+
+Qwen provides powerful models through `chat.qwen.ai`, but does not expose a fully OpenAI-compatible API.
+
+This proxy allows existing OpenAI SDKs, coding agents, and developer tools to use Qwen models without modification.
+
+---
+
+## Features
+
+- [x] OpenAI-compatible API
+- [x] Streaming responses (SSE)
+- [x] Tool/function calling
+- [x] Conversation persistence
+- [x] Automatic system message merging
+- [x] Model aliases
+- [x] OpenCode support
+- [x] LangChain support
+- [ ] Vision uploads
+- [ ] Docker image
+- [ ] Multi-account rotation
+
+---
+
+## Compatible Clients
+
+Works with:
+
+- OpenCode
+- Cline
+- Continue.dev
+- LangChain
+- OpenAI SDK
+- Roo Code
+- OpenWebUI
+- LibreChat
+- AnythingLLM
+- Cursor
+
+Any OpenAI-compatible client should work.
+
+---
+
+## Requirements
+
+- Node.js 18+
+- npm or pnpm
+
+---
 
 ## Quick Start
 
 ```bash
 npm install
 npm run build
-npm start          # → http://localhost:5000/v1/chat/completions
+npm start
 ```
 
-### Authentication
+Server runs at:
 
-**Option A: Playwright Login (Recommended)**
+```txt
+http://localhost:5000/v1
+```
+
+---
+
+## Authentication
+
+### Option A — Playwright Login (Recommended)
 
 ```bash
 npm run login
 ```
 
-Opens a browser. Log in to chat.qwen.ai, then press Enter in the terminal to extract tokens.
+This opens a browser window.
 
-**Option B: Manual Token Extraction**
+1. Log in to `chat.qwen.ai`
+2. Press Enter in the terminal
+3. Tokens and cookies are extracted automatically
 
-1. Log in to [chat.qwen.ai](https://chat.qwen.ai)
-2. Open browser DevTools (F12)
+---
+
+### Option B — Manual Extraction
+
+1. Log in to `https://chat.qwen.ai`
+2. Open DevTools (`F12`)
 3. Go to Console tab
-4. Run: `localStorage.getItem("token")`
-5. Copy the token value
-6. Go to Network tab, find any request to chat.qwen.ai
-7. Copy the `Cookie` header value
-8. Create a `.env` file:
+4. Run:
+
+```js
+localStorage.getItem("token")
+```
+
+5. Copy the token
+6. Open Network tab
+7. Copy the `Cookie` header from any request
+8. Create `.env`:
 
 ```env
 QWEN_AUTH_TOKEN=your_token_here
-QWEN_COOKIE="your_cookie_string_here"
+QWEN_COOKIE="your_cookie_here"
 ```
 
-### Model Aliases
+---
 
-| Name | Maps to | Use case |
-|------|---------|----------|
-| `qwen`, `qwen-max` | `qwen-max-latest` | General purpose |
-| `qwen-think` | `qwen3-235b-a22b` | Deep reasoning |
-| `qwen-coder` | `qwen3-coder-plus` | Code generation |
-| `qwen-flash` | `qwen3-30b-a3b` | Fast responses |
-| `qwen-vl` | `qwen3-vl-plus` | Vision |
-| `qwq` | `qwq-32b` | Math/reasoning |
+## Usage
 
-Upstream model IDs (e.g. `qwen3-235b-a22b`) are passed through directly.
+### curl
 
-## API
+```bash
+curl http://localhost:5000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model":"qwen-coder",
+    "messages":[
+      {
+        "role":"user",
+        "content":"Write a Python web scraper"
+      }
+    ]
+  }'
+```
 
-### `POST /v1/chat/completions`
+---
 
-Accepts the standard [OpenAI chat completion format](https://platform.openai.com/docs/api-reference/chat).
+### OpenAI SDK
+
+```ts
+import OpenAI from "openai"
+
+const client = new OpenAI({
+  baseURL: "http://localhost:5000/v1",
+  apiKey: "dummy"
+})
+
+const response = await client.chat.completions.create({
+  model: "qwen-coder",
+  messages: [
+    {
+      role: "user",
+      content: "Hello"
+    }
+  ]
+})
+
+console.log(response.choices[0].message)
+```
+
+---
+
+## Tool Calling Example
 
 ```json
 {
   "model": "qwen-coder",
   "messages": [
-    { "role": "user", "content": "Write a Python web scraper" }
-  ],
-  "stream": true
-}
-```
-
-With tools:
-
-```json
-{
-  "model": "qwen-coder",
-  "messages": [{ "role": "user", "content": "Read config.json" }],
-  "tools": [{
-    "type": "function",
-    "function": {
-      "name": "read_file",
-      "description": "Read a file",
-      "parameters": { "type": "object", "properties": { "path": { "type": "string" } }, "required": ["path"] }
+    {
+      "role": "user",
+      "content": "Read config.json"
     }
-  }]
-}
-```
-
-### `GET /v1/models`
-
-Lists available Qwen models. Response follows OpenAI format:
-
-```json
-{
-  "object": "list",
-  "data": [
-    { "id": "qwen-max-latest", "object": "model", "owned_by": "qwen" },
-    { "id": "qwen3-coder-plus", "object": "model", "owned_by": "qwen" }
+  ],
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "read_file",
+        "description": "Read a file",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string"
+            }
+          },
+          "required": ["path"]
+        }
+      }
+    }
   ]
 }
 ```
 
+---
+
+## Model Aliases
+
+| Alias | Upstream Model | Use Case |
+|---|---|---|
+| `qwen` | `qwen-max-latest` | General purpose |
+| `qwen-max` | `qwen-max-latest` | General purpose |
+| `qwen-think` | `qwen3-235b-a22b` | Reasoning |
+| `qwen-coder` | `qwen3-coder-plus` | Coding |
+| `qwen-flash` | `qwen3-30b-a3b` | Fast responses |
+| `qwen-vl` | `qwen3-vl-plus` | Vision |
+| `qwq` | `qwq-32b` | Math/reasoning |
+
+Direct upstream model IDs are also supported.
+
+---
+
+## API Endpoints
+
+### `POST /v1/chat/completions`
+
+OpenAI-compatible chat completions endpoint.
+
+### `GET /v1/models`
+
+Lists available models.
+
 ### `DELETE /v1/chats/:chatId`
 
-Removes a Qwen chat session from the server and upstream.
+Deletes stored chat sessions.
 
 ### `POST /v1/auth/refresh`
 
-Refreshes authentication credentials.
+Refreshes Qwen authentication credentials.
+
+---
 
 ## Environment Variables
 
 | Variable | Default | Description |
-|----------|---------|-------------|
-| `QWEN_AUTH_TOKEN` | — | Bearer token from chat.qwen.ai |
-| `QWEN_COOKIE` | — | Cookie string for Cloudflare bypass |
+|---|---|---|
+| `QWEN_AUTH_TOKEN` | — | Qwen bearer token |
+| `QWEN_COOKIE` | — | Browser cookie |
 | `PORT` | `5000` | Server port |
 | `HOST` | `0.0.0.0` | Bind address |
-| `LOG_LEVEL` | `info` | `debug`, `info`, `warn`, `error` |
-| `DATA_DIR` | `./data` | Session persistence directory |
-| `RATE_LIMIT` | `30` | Requests/minute/IP |
-| `REQUEST_TIMEOUT` | `120000` | Upstream timeout (ms) |
+| `LOG_LEVEL` | `info` | Logging level |
+| `DATA_DIR` | `./data` | Session storage |
+| `RATE_LIMIT` | `30` | Requests/min/IP |
+| `REQUEST_TIMEOUT` | `120000` | Upstream timeout |
+
+---
 
 ## Architecture
 
-```
-Client (OpenCode, curl, etc.)
-     ↓  OpenAI-format JSON
-Qwen OpenAI Proxy
-     ↓  Qwen API payloads
-chat.qwen.ai
-     ↓
-Qwen models
+```txt
+Client (OpenAI SDK / OpenCode / LangChain)
+                ↓
+        Qwen OpenAI Proxy
+                ↓
+          chat.qwen.ai
+                ↓
+           Qwen Models
 ```
 
-```
+```txt
 src/
-├── index.ts               # Server entry point
-├── auth/auth-manager.ts   # Token & cookie lifecycle
+├── index.ts
+├── auth/
 ├── client/
-│   ├── qwen-client.ts     # Upstream API client
-│   └── models.ts          # Model resolution & aliases
 ├── proxy/
-│   ├── router.ts          # Express routes
-│   └── openai-compat.ts   # OpenAI ↔ Qwen translation
 ├── streaming/
-│   └── stream-adapter.ts  # SSE parsing
 ├── tools/
-│   └── tool-translator.ts # Tool call format conversion
 ├── session/
-│   └── session-manager.ts # Chat session persistence
 └── utils/
-    ├── logger.ts
-    ├── error-handler.ts
-    └── rate-limiter.ts
 ```
+
+---
+
+## Qwen Compatibility
+
+Qwen enforces a strict constraint:
+
+- Maximum one system message
+- System message must be first
+
+The proxy automatically:
+- merges multiple system prompts
+- preserves tool messages
+- preserves assistant messages
+- fixes compatibility with OpenCode and similar agents
+
+---
 
 ## Caveats
 
-- chat.qwen.ai is not an official public API — this proxy reverse‑engineers the web interface
-- Tokens expire periodically; re‑run `npm run login` or refresh via the `/v1/auth/refresh` endpoint
-- Qwen enforces ≤1 system message, first position — the proxy merges multiple system prompts automatically
-- Rate limits are per‑account and unadvertised; adjust `RATE_LIMIT` in `.env` if you hit 429s
+- `chat.qwen.ai` is not an official public API
+- This project reverse-engineers the web interface
+- Tokens expire periodically
+- Rate limits are undocumented and account-dependent
+- Some upstream model names may change
+
+---
+
+## Roadmap
+
+- Vision/image uploads
+- Docker image
+- WebSocket support
+- Multi-account routing
+- Better retry handling
+- OAuth authentication flow
+
+---
+
+## Disclaimer
+
+This project is unofficial and is not affiliated with Alibaba or Qwen.
+
+Use responsibly and at your own risk.
+
+---
 
 ## License
 
