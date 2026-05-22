@@ -164,6 +164,32 @@ console.log(response.choices[0].message)
 
 ---
 
+### Sample `opencode.json` config
+
+Add this to your `opencode.json` providers:
+
+```jsonc
+"localproxy": {
+  "npm": "@ai-sdk/openai-compatible",
+  "name": "Local Proxy",
+  "options": {
+    "baseURL": "http://localhost:5000/v1",
+    "apiKey": "dummy"
+  },
+  "models": {
+    "qwen3.7-max": {
+      "name": "Qwen 3.7 Max"
+    },
+    "qwen3.6-plus": {
+      "name": "Qwen 3.6 Plus"
+    }
+    // Add any model from /v1/models above
+  }
+}
+```
+
+---
+
 ## Tool Calling Example
 
 ```json
@@ -223,6 +249,10 @@ OpenAI-compatible chat completions endpoint.
 ### `GET /v1/models`
 
 Lists available models.
+
+```bash
+curl http://localhost:5000/v1/models
+```
 
 ### `DELETE /v1/chats/:chatId`
 
